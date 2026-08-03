@@ -2,7 +2,3 @@ lib/*
 *.mp3
 *.wav
 *.mp4
-plib/*
-plib310/*
-plib311/*
-plib312/*

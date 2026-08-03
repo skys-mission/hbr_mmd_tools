@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/skys-mission/hbr_mmd_tools?style=flat-square)](https://github.com/skys-mission/hbr_mmd_tools/releases)
 [![License](https://img.shields.io/github/license/skys-mission/hbr_mmd_tools?style=flat-square)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11-blue?style=flat-square)]()
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.13-blue?style=flat-square)]()
 [![Pylint](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/pylint.yml)
 [![CodeQL Advanced](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/codeql.yml)
 [![Bandit](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/bandit.yml/badge.svg)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/bandit.yml)
@@ -50,8 +50,9 @@
 2. Blender 中：`编辑 → 偏好设置 → 插件 → 从磁盘安装`。
 3. 选择下载的 `.zip`，勾选启用 **HBR MMD Tools**。
 
-> **版本要求：** Blender **4.2 LTS 至 5.0.x**（Python 3.11）。  
-> Blender 5.1+ **暂不支持**（Python 3.13 ABI 不兼容）。
+> **版本要求：** Blender **4.2 LTS 至 5.2 LTS**（Python 3.11 / 3.13）。
+
+> **注意：** 当前版本为 **0.5.1-preview**，如需稳定版本请使用 **0.5.0**。我们不会发布 0.5.1 正式版，下一个正式版将直接发布 **0.5.5**。
 
 ---
 
@@ -145,8 +146,8 @@ VRM 或其它模型需确保存在以下形态键（可复制已有形态键改�
 
 | 版本 | Python | 状态 |
 |---|---|---|
-| 4.2 LTS – 5.0.x | 3.11 | 已支持并测试 |
-| 5.1+ | 3.13 | **暂不支持**（ABI 不兼容） |
+| 4.2 LTS – 4.5 LTS | 3.11 | 已支持 |
+| 5.0 – 5.2 LTS | 3.11 / 3.13 | 已支持（待实机验证） |
 | < 4.2 | — | 不支持 |
 
 ### 操作系统
@@ -170,7 +171,7 @@ pylint src/ --fail-under=9.9
 
 ### 注意事项
 
-- 捆绑的音频分析依赖仅针对 **Python 3.11** 编译。
+- 音频分析仅使用 Python 标准库实现；唯一内嵌的二进制是 FFmpeg（用于解码任意音频格式）。
 
 ### AI 辅助开发
 
