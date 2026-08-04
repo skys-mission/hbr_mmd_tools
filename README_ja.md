@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/skys-mission/hbr_mmd_tools?style=flat-square)](https://github.com/skys-mission/hbr_mmd_tools/releases)
 [![License](https://img.shields.io/github/license/skys-mission/hbr_mmd_tools?style=flat-square)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11-blue?style=flat-square)]()
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.13-blue?style=flat-square)]()
 [![Pylint](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/pylint.yml)
 [![CodeQL Advanced](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/codeql.yml)
 [![Bandit](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/bandit.yml/badge.svg)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/bandit.yml)
@@ -47,8 +47,9 @@
 2. Blender で：`編集 → プリファレンス → アドオン → ディスクからインストール`。
 3. ダウンロードした `.zip` を選択し、**HBR MMD Tools** を有効化します。
 
-> **バージョン要件：** Blender **4.2 LTS ～ 5.0.x**（Python 3.11）。  
-> Blender 5.1+ は **未対応** です（Python 3.13 の ABI 互換性がありません）。
+> **バージョン要件：** Blender **4.2 LTS ～ 5.2 LTS**（Python 3.11 / 3.13）。
+
+> **注意：** 現在のバージョンは **0.5.1-preview** です。安定版が必要な場合は **0.5.0** をご利用ください。0.5.1 の正式版はリリースせず、次の正式版は **0.5.5** として直接リリースされます。
 
 ---
 
@@ -142,8 +143,8 @@ MMD スタイルのキャラクター向けワンクリックレンダリング�
 
 | バージョン | Python | 状態 |
 |---|---|---|
-| 4.2 LTS – 5.0.x | 3.11 | 対応済み・テスト済み |
-| 5.1+ | 3.13 | **未対応**（ABI 互換性なし） |
+| 4.2 LTS – 4.5 LTS | 3.11 | 対応済み |
+| 5.0 – 5.2 LTS | 3.11 / 3.13 | 対応済み（実機検証待ち） |
 | < 4.2 | — | 非対応 |
 
 ### オペレーティングシステム
@@ -167,7 +168,7 @@ pylint src/ --fail-under=9.9
 
 ### 注意事項
 
-- バンドルされた音声分析依存ライブラリは **Python 3.11** 専用にコンパイルされています。
+- 音声解析は Python 標準ライブラリのみで実装されています。バンドルされるバイナリは FFmpeg（任意の音声形式のデコード用）のみです。
 
 ### AI 支援開発
 

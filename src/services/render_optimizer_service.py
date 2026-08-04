@@ -13,12 +13,12 @@ from ..core.render_optimizer.utils import (
     analyze_model_tone,
     cleanup_auto_objects,
 )
+from ..core.render_optimizer import pipeline
 from ..core.render_optimizer.material import enhance_materials
 from ..core.render_optimizer.lighting import setup_lights
 from ..core.render_optimizer.world_env import setup_world, reset_world_default
 from ..core.render_optimizer.compositor import setup_compositor, setup_render
 from ..core.render_optimizer.outline import setup_outline, disable_freestyle
-from ..core.render_optimizer.presets import ENGINE_EEVEE_ID, ENGINE_CYCLES_ID
 from ..util.logger import Log
 
 
@@ -51,7 +51,9 @@ def _resolve_outline_strategy(scene, is_npr):
 
 def _resolve_engine(scene):
     """根据场景设置解析渲染引擎。"""
-    return ENGINE_EEVEE_ID if scene.render_opt_engine == 'EEVEE' else ENGINE_CYCLES_ID
+    if scene.render_opt_engine == 'EEVEE':
+        return pipeline.get_eevee_engine_id()
+    return pipeline.CYCLES_ENGINE_ID
 
 
 def _apply_exposure(scene, brightness, aggressive):
@@ -136,9 +138,7 @@ def reset_render_optimizer():
     disable_freestyle(scene)
 
     # 关闭 Compositor
-    scene.use_nodes = False
-    if scene.node_tree:
-        scene.node_tree.nodes.clear()
+    pipeline.disable_compositor(scene)
 
     reset_world_default(scene)
 

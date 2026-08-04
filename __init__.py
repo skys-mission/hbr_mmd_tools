@@ -10,7 +10,7 @@ from .src.core.compat import ensure_supported_blender_version
 bl_info = {
     "name": "HBR MMD Tools",
     "author": "Half-Bottled Reverie, github.com/skys-mission",
-    "version": (0, 5, 0),
+    "version": (0, 5, 1),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > HBR MMD Tools",
     "description": "Blender add-on for MMD lip sync, random blinking, and related workflow tools.",
@@ -37,12 +37,7 @@ def unregister():
 
     本函数在插件卸载时被调用，用于卸载插件。
     """
-    try:
-        AddonManager.unload_addon()
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        from .src.audio.pkg import unload_pkg  # pylint: disable=import-outside-toplevel
-        unload_pkg()
-        raise e
+    AddonManager.unload_addon()
 
 
 if __name__ == "__main__":

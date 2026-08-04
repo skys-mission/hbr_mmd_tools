@@ -4,15 +4,11 @@
 Blender 版本兼容相关工具。
 """
 
-import os
-import sys
-
 import bpy  # pylint: disable=import-error
 
 
 MIN_SUPPORTED_BLENDER_VERSION = (4, 2, 0)
-UNSUPPORTED_FROM_VERSION = (5, 1, 0)
-FIXED_BUNDLED_PYTHON_VERSION = (3, 11)
+UNSUPPORTED_FROM_VERSION = (5, 3, 0)
 
 
 def get_blender_version():
@@ -41,24 +37,7 @@ def ensure_supported_blender_version(
         threshold = ".".join(str(part) for part in unsupported_from)
         current = ".".join(str(part) for part in current_version)
         raise RuntimeError(
-            f"HBR MMD Tools supports Blender 4.2 - 5.0 only, "
+            f"HBR MMD Tools supports Blender 4.2 - 5.2 only, "
             f"current version is {current}. "
-            f"Blender {threshold}+ uses a newer Python version that is not yet compatible."
+            f"Blender {threshold}+ has not been verified yet."
         )
-
-
-def get_bundled_python_lib_path(base_dir):
-    """返回固定的 bundled 依赖目录。"""
-    runtime_version = (sys.version_info.major, sys.version_info.minor)
-    if runtime_version != FIXED_BUNDLED_PYTHON_VERSION:
-        expected = ".".join(str(part) for part in FIXED_BUNDLED_PYTHON_VERSION)
-        current = ".".join(str(part) for part in runtime_version)
-        raise RuntimeError(
-            f"HBR MMD Tools bundled audio dependencies require Python {expected}, "
-            f"current runtime is {current}."
-        )
-
-    return os.path.join(
-        base_dir,
-        f"plib{FIXED_BUNDLED_PYTHON_VERSION[0]}{FIXED_BUNDLED_PYTHON_VERSION[1]}",
-    )

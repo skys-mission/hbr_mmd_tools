@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/skys-mission/hbr_mmd_tools?style=flat-square)](https://github.com/skys-mission/hbr_mmd_tools/releases)
 [![License](https://img.shields.io/github/license/skys-mission/hbr_mmd_tools?style=flat-square)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11-blue?style=flat-square)]()
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.13-blue?style=flat-square)]()
 [![Pylint](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/pylint.yml)
 [![CodeQL Advanced](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/codeql.yml)
 [![Bandit](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/bandit.yml/badge.svg)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/bandit.yml)
@@ -44,8 +44,9 @@ Other languages: [简体中文](README_zh.md), [日本語](README_ja.md)
 2. In Blender: `Edit → Preferences → Add-ons → Install from Disk`.
 3. Select the downloaded `.zip` and enable **HBR MMD Tools**.
 
-> **Version Requirement:** Blender **4.2 LTS to 5.0.x** (Python 3.11).  
-> Blender 5.1+ is **not supported** due to Python 3.13 ABI changes.
+> **Version Requirement:** Blender **4.2 LTS to 5.2 LTS** (Python 3.11 / 3.13).
+
+> **Note:** The current version is **0.5.1-preview**. If you need a stable build, please use **0.5.0**. There will be no official 0.5.1 release — the next official release will be **0.5.5**.
 
 ---
 
@@ -139,8 +140,8 @@ One-click render setup optimized for MMD-style characters.
 
 | Version | Python | Status |
 |---|---|---|
-| 4.2 LTS – 5.0.x | 3.11 | Supported & Tested |
-| 5.1+ | 3.13 | **Not Supported** (ABI mismatch) |
+| 4.2 LTS – 4.5 LTS | 3.11 | Supported |
+| 5.0 – 5.2 LTS | 3.11 / 3.13 | Supported (pending on-device verification) |
 | < 4.2 | — | Not Supported |
 
 ### Operating Systems
@@ -164,7 +165,7 @@ pylint src/ --fail-under=9.9
 
 ### Notes
 
-- The bundled audio analysis dependencies are compiled for **Python 3.11** only.
+- Audio analysis runs on the Python standard library alone; the only bundled binary is FFmpeg (used to decode arbitrary audio formats).
 
 ### AI-Assisted Development
 
