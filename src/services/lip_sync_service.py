@@ -178,7 +178,10 @@ def set_lips_to_mesh_with_config(mesh, lips, start_frame, config):  # pylint: di
 def _build_target_tracks(lips, shape_key_mapping, adjustment_rules):
     target_tracks = {}
     for source_key in CANONICAL_LIP_SYNC_KEYS:
-        target_morph_key = shape_key_mapping.get(source_key, source_key)
+        target_morph_key = shape_key_mapping.get(source_key)
+        if target_morph_key is None:
+            # 配置未覆盖的规范键直接跳过（如 VRM 标准没有 ん），避免对不存在的形态键告警。
+            continue
         target_track = target_tracks.setdefault(target_morph_key, {})
         adjustment_rule = adjustment_rules.get(source_key, {})
 

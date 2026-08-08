@@ -80,18 +80,13 @@ Generates mouth shape keyframes (あ, い, う, え, お, ん) by analyzing audi
 
 **Adapting to Non-MMD Models**
 
-For VRM or other models, ensure the following shape keys exist (or copy existing ones):
+The VRM standard defines expression *preset* names only — shape key names are not standardized, and an imported model keeps its original morph names. Check the model's actual shape keys first:
 
-| MMD | Equivalent |
-|---|---|
-| あ | A |
-| い | I |
-| う | U |
-| え | E |
-| お | O |
-| ん | N |
+- Keys named after VRM 1.0 presets (`aa` `ih` `ou` `ee` `oh`, blink `blink`): select the bundled `vrm.json`
+- Keys named after VRM 0.x presets (`A` `I` `U` `E` `O`, blink `Blink`): select the bundled `vrm0.json`
+- Any other naming (e.g. VRoid exports use `..._Fcl_MTH_A`): copy/rename the shape keys, or import a custom config
 
-> **At least "あ" must exist.** See [copy_shape_key.md](docs/copy_shape_key.md) for how to copy shape keys.
+> **At least one lip shape key must exist.** See [copy_shape_key.md](docs/copy_shape_key.md) for how to copy shape keys.
 
 ---
 

@@ -1,9 +1,9 @@
 {
-  "name": "VRM Blink",
-  "description": "Standard VRM blink configuration",
+  "name": "VRM 1.0 Blink",
+  "description": "Blink config for models whose shape key uses the VRM 1.0 expression preset name (blink)",
   "version": "1.0",
   "author": "Half-Bottled Reverie",
   "shape_keys": {
-    "blink": "Blink"
+    "blink": "blink"
   }
 }
