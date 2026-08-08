@@ -148,7 +148,11 @@ def scan_model_features(meshes):
         obj = mesh
         while obj is not None:
             keys = obj.keys()
-            if 'mmd_root' in keys:
+            # 5.0+ bpy.props 定义的属性不再出现在 keys() 中：
+            # mmd_tools 启用时改走 RNA 属性判定；keys() 检查保留，
+            # 覆盖插件禁用或 4.x 保存的 blend 文件（5.0 会复制旧 ID 属性）。
+            # VRM 侧无等效 RNA 判定，但 MToon 节点组检查已是可靠信号。
+            if 'mmd_root' in keys or str(getattr(obj, 'mmd_type', '')) == 'ROOT':
                 has_mmd_shader = True
             if any('vrm' in str(k).lower() for k in keys):
                 has_vrm_props = True

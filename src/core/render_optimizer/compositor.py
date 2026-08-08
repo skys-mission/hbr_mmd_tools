@@ -24,7 +24,11 @@ def _build_glare(nt):
     # 低质量：卡通画面只需要轻微泛光，避免性能损耗
     pipeline.set_node_option(glare, 'quality', ('Quality',), 'LOW')
     pipeline.set_node_option(glare, 'threshold', ('Threshold',), BLOOM_THRESHOLD)
-    size_value = BLOOM_SIZE_MODERN if pipeline.is_modern_compositor() else BLOOM_SIZE_LEGACY
+    # Glare 选项在 4.5+ 迁移为输入插槽（Size 为 0-1 比例），
+    # 4.2-4.4 为节点属性（Size 是 2 的幂指数）；按插槽存在与否做特征检测，
+    # 比版本号判定更准（4.5 是旧合成器节点树，但已是新 Glare 节点）
+    size_value = (BLOOM_SIZE_MODERN if glare.inputs.get('Size') is not None
+                  else BLOOM_SIZE_LEGACY)
     pipeline.set_node_option(glare, 'size', ('Size',), size_value)
     pipeline.set_node_option(glare, 'mix', ('Strength', 'Mix'), BLOOM_MIX)
     return glare

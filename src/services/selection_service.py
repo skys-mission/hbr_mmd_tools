@@ -4,6 +4,7 @@
 选中对象与形态键相关的公共服务。
 """
 
+from ..core.compat import get_action_fcurves
 from ..util.logger import Log
 
 
@@ -43,11 +44,12 @@ def clear_shape_key_keyframes_in_range(obj, shape_key_name, start_frame, end_fra
 
     shape_key = shape_keys.key_blocks[shape_key_name]
     anim_data = shape_key.id_data.animation_data
-    if not anim_data or not anim_data.action:
+    fcurves = get_action_fcurves(anim_data) if anim_data else None
+    if not fcurves:
         return
 
     data_path = f'key_blocks["{shape_key.name}"].value'
-    for fcurve in anim_data.action.fcurves:
+    for fcurve in fcurves:
         if fcurve.data_path != data_path:
             continue
 
@@ -57,7 +59,7 @@ def clear_shape_key_keyframes_in_range(obj, shape_key_name, start_frame, end_fra
                 fcurve.keyframe_points.remove(keyframe)
 
         if not fcurve.keyframe_points:
-            anim_data.action.fcurves.remove(fcurve)
+            fcurves.remove(fcurve)
         else:
             fcurve.update()
         return
