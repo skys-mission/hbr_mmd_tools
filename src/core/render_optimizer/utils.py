@@ -1,30 +1,65 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2025, https://github.com/skys-mission and Half-Bottled Reverie
+# Copyright (c) 2026, https://github.com/skys-mission and Half-Bottled Reverie
 """
-MMD Render Optimizer 核心工具函数。
-模型检测、语义分类、拓扑检查、色调分析、清理工具。
+MMD Smart Toon Render — 核心工具函数（bpy 层）。
+对象收集、模型检测、语义分类、拓扑检查、色调分析、自动对象清理。
 """
-
-import re
 
 import bpy  # pylint: disable=import-error
 import bmesh  # pylint: disable=import-error
 from mathutils import Vector  # pylint: disable=import-error
 
 from .presets import (
-    HEAD_BONE_NAMES, SEMANTIC_RULES, PINYIN_RULES,
-    _COOL_KEYWORDS, _WARM_KEYWORDS,
+    HEAD_BONE_NAMES, _COOL_KEYWORDS, _WARM_KEYWORDS,
+    AUTO_LIGHT_PREFIX, OUTLINE_MATERIAL_NAME, OUTLINE_MODIFIER_NAME,
+    OUTLINE_MASK_GROUP_NAME,
+    LEGACY_AUTO_NAMES, classify_material, is_rigid_body_object_name,
 )
+
+__all__ = [
+    'collect_objects_from_selection',
+    'find_primary_mesh',
+    'find_armature_for_meshes',
+    'head_bone_world_loc',
+    'calc_character_metrics',
+    'classify_material',
+    'iter_mesh_materials',
+    'iter_unique_materials',
+    'analyze_model_tone',
+    'check_mesh_topology',
+    'scan_model_features',
+    'is_rigid_body_object',
+    'cleanup_auto_objects',
+]
 
 
 # ------------------------------------------------------------------
 # 模型检测（基于选择对象递归查找）
 # ------------------------------------------------------------------
 
+def is_rigid_body_object(obj):
+    """
+    识别 MMD 刚体/关节伪对象（mmd_tools 导入的物理辅助体）。
+
+    依次检查：mmd_tools ID 属性（插件启用或禁用均可）、
+    对象名数字前缀、父级分组名。
+    """
+    if 'mmd_rigid' in obj.keys() or 'mmd_joint' in obj.keys():
+        return True
+    if str(getattr(obj, 'mmd_type', '')) in ('RIGID_BODY', 'JOINT'):
+        return True
+    if obj.type == 'MESH' and is_rigid_body_object_name(obj.name):
+        return True
+    parent = obj.parent
+    if parent is not None and parent.name.lower() in ('rigidbodies', 'joints'):
+        return True
+    return False
+
+
 def collect_objects_from_selection(context):
     """
     从当前选中的对象出发，递归收集子树中的所有 MESH 和 ARMATURE 对象。
-    返回 (meshes, armatures) 两个列表。
+    自动排除 MMD 刚体伪 mesh。返回 (meshes, armatures) 两个列表。
     """
     selected = list(context.selected_objects)
     if not selected:
@@ -47,7 +82,9 @@ def _collect_recursive(obj, meshes, armatures, seen):
         return
     seen.add(obj_id)
 
-    if obj.type == 'MESH' and not _is_rigid_dummy(obj):
+    if is_rigid_body_object(obj):
+        return
+    if obj.type == 'MESH':
         meshes.append(obj)
     elif obj.type == 'ARMATURE':
         armatures.append(obj)
@@ -85,12 +122,43 @@ def find_armature_for_meshes(meshes, armatures):
     return armatures[0]
 
 
-def _is_rigid_dummy(obj):
-    """识别 MMD 物理刚体伪 mesh（000_xxx 命名格式）。"""
-    if obj.type != 'MESH':
-        return False
-    n = obj.name
-    return len(n) > 3 and n[:3].isdigit() and n[3] == '_'
+def scan_model_features(meshes):
+    """
+    扫描 mesh 材质，收集模型来源特征标志。
+
+    返回 dict(has_mmd_shader=..., has_mtoon_group=..., has_vrm_props=...)，
+    供 presets.detect_model_type 判定 MMD / VRM / GENERIC。
+    """
+    has_mmd_shader = False
+    has_mtoon_group = False
+    has_vrm_props = False
+
+    for mat in iter_unique_materials(meshes):
+        if not mat.use_nodes:
+            continue
+        for node in mat.node_tree.nodes:
+            if node.name == 'mmd_shader':
+                has_mmd_shader = True
+            elif node.bl_idname == 'ShaderNodeGroup' and node.node_tree:
+                group_name = node.node_tree.name.lower()
+                if 'mtoon' in group_name:
+                    has_mtoon_group = True
+
+    for mesh in meshes:
+        obj = mesh
+        while obj is not None:
+            keys = obj.keys()
+            if 'mmd_root' in keys:
+                has_mmd_shader = True
+            if any('vrm' in str(k).lower() for k in keys):
+                has_vrm_props = True
+            obj = obj.parent
+
+    return {
+        'has_mmd_shader': has_mmd_shader,
+        'has_mtoon_group': has_mtoon_group,
+        'has_vrm_props': has_vrm_props,
+    }
 
 
 # ------------------------------------------------------------------
@@ -128,36 +196,37 @@ def calc_character_metrics(_root_obj, arm, mesh):
         fy = (max(c.y for c in coords) + min(c.y for c in coords)) / 2
         fz = min(zs) + height * 0.92
 
+    if height <= 0:
+        height = 1.6
     es = (height / 1.7) ** 2
     cz = fz - height * 0.92
     return height, fx, fy, fz, cz, es
 
 
 # ------------------------------------------------------------------
-# 材质语义分类
+# 材质遍历
 # ------------------------------------------------------------------
 
-def classify_material(mat_name):
-    """多语言材质语义分类，返回 (category, is_overlay)。"""
-    is_overlay = (
-        mat_name.endswith('+')
-        or mat_name.endswith('+.001')
-        or mat_name.endswith('++')
-    )
-    name_lower = mat_name.lower()
+def iter_mesh_materials(meshes):
+    """遍历所有 mesh 的有效材质（跳过空槽位与 mmd_tools 内部材质）。"""
+    for mesh in meshes:
+        for slot in mesh.material_slots:
+            mat = slot.material
+            if not mat:
+                continue
+            if mat.name.startswith(('mmd_tools_rigid', 'mmd_edge.')):
+                continue
+            yield mat
 
-    for cat, kws in SEMANTIC_RULES:
-        for kw in kws:
-            if kw.lower() in name_lower:
-                return cat, is_overlay
 
-    tokens = [t for t in re.split(r'[._\-+\s]+|\d+', name_lower) if t]
-    for cat, kws in PINYIN_RULES:
-        for kw in kws:
-            if kw in tokens:
-                return cat, is_overlay
-
-    return 'fallback', is_overlay
+def iter_unique_materials(meshes):
+    """按材质去重遍历（同名材质只处理一次）。"""
+    seen = set()
+    for mat in iter_mesh_materials(meshes):
+        if mat.name in seen:
+            continue
+        seen.add(mat.name)
+        yield mat
 
 
 # ------------------------------------------------------------------
@@ -177,30 +246,22 @@ def _classify_name_tone(mat_name):
 
 
 def _extract_base_color_rgb(mat):
-    """从材质 Principled BSDF 提取 Base Color RGB，无效时返回 None。"""
+    """从材质提取基础色 RGB（Principled 或 mmd_shader Diffuse Color），无效时返回 None。"""
     if not mat.use_nodes:
         return None
     for n in mat.node_tree.nodes:
+        col = None
         if n.bl_idname == 'ShaderNodeBsdfPrincipled':
             col = n.inputs.get('Base Color')
-            if col is None:
-                return None
-            rgb = col.default_value[:3]
-            s = sum(rgb)
-            if 0.1 <= s <= 2.9:
-                return rgb
-            return None
+        elif n.name == 'mmd_shader':
+            col = n.inputs.get('Diffuse Color')
+        if col is None:
+            continue
+        rgb = col.default_value[:3]
+        s = sum(rgb)
+        if 0.1 <= s <= 2.9:
+            return rgb
     return None
-
-
-def iter_mesh_materials(meshes):
-    """遍历所有 mesh 的有效材质（跳过空槽位）。"""
-    for mesh in meshes:
-        for slot in mesh.material_slots:
-            mat = slot.material
-            if not mat:
-                continue
-            yield mat
 
 
 def _collect_tone_data(meshes):
@@ -329,16 +390,33 @@ def check_mesh_topology(mesh):
 # ------------------------------------------------------------------
 
 def cleanup_auto_objects():
-    """删除之前自动生成的灯光和辅助对象。"""
-    auto_names = [
-        'AutoKey', 'AutoFill', 'AutoRim', 'AutoHair', 'AutoBack',
-        'AutoFront', 'AutoGround', 'AutoBounce', 'AutoBackdrop', 'AutoDome',
-    ]
-    for name in auto_names:
-        obj = bpy.data.objects.get(name)
-        if obj:
+    """
+    删除自动生成的灯光、描边与辅助对象（含旧版一键渲染遗留）。
+    同时移除所有 mesh 上的描边修改器与描边材质槽位。
+    """
+    # 灯光与旧版辅助对象
+    for obj in list(bpy.data.objects):
+        if obj.name.startswith(AUTO_LIGHT_PREFIX) or obj.name in LEGACY_AUTO_NAMES:
             bpy.data.objects.remove(obj, do_unlink=True)
-    for name in ['AutoBackdropMat', 'AutoDomeMat', 'AutoGroundMat']:
+
+    # 描边修改器与槽位
+    for obj in bpy.data.objects:
+        if obj.type != 'MESH':
+            continue
+        for mod in [m for m in obj.modifiers if m.name == OUTLINE_MODIFIER_NAME]:
+            obj.modifiers.remove(mod)
+        # 描边权重顶点组（贴花排除掩码）
+        mask_group = obj.vertex_groups.get(OUTLINE_MASK_GROUP_NAME)
+        if mask_group is not None:
+            obj.vertex_groups.remove(mask_group)
+        # 逆序弹出描边材质槽，避免索引错位
+        for i in range(len(obj.data.materials) - 1, -1, -1):
+            mat = obj.data.materials[i]
+            if mat is not None and mat.name == OUTLINE_MATERIAL_NAME:
+                obj.data.materials.pop(index=i)
+
+    # 材质数据块
+    for name in (OUTLINE_MATERIAL_NAME, *LEGACY_AUTO_NAMES):
         mat = bpy.data.materials.get(name)
         if mat:
             bpy.data.materials.remove(mat)

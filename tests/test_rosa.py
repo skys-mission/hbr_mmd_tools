@@ -99,7 +99,7 @@ class FramingAndWindowTests(unittest.TestCase):
     def test_frame_signal_produces_overlapping_frames(self):
         """Frame count and content should match librosa.util.frame semantics."""
         samples = [float(value) for value in range(8)]
-        frames = frame_signal(samples, frame_length=4, hop_length=2)
+        frames = list(frame_signal(samples, frame_length=4, hop_length=2))
         self.assertEqual(len(frames), 3)
         self.assertEqual(frames[0], [0.0, 1.0, 2.0, 3.0])
         self.assertEqual(frames[1], [2.0, 3.0, 4.0, 5.0])
@@ -107,7 +107,7 @@ class FramingAndWindowTests(unittest.TestCase):
 
     def test_frame_signal_pads_short_input(self):
         """Inputs shorter than one frame should be zero-padded."""
-        frames = frame_signal([1.0, 2.0], frame_length=4, hop_length=2)
+        frames = list(frame_signal([1.0, 2.0], frame_length=4, hop_length=2))
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0], [1.0, 2.0, 0.0, 0.0])
 

@@ -23,11 +23,11 @@ from ..api.scene.mmd_set import (lips_audio_path, lips_audio_source, lips_timeli
 from ..api.scene.render_preset_scene import (
     resolution_preset, aspect_ratio_preset, orientation_preset)
 from ..api.scene.render_optimizer_scene import (
-    render_opt_preset,
-    render_opt_brightness_override,
+    render_opt_style,
+    render_opt_outline,
+    render_opt_outline_width,
     render_opt_use_compositor,
-    render_opt_outline_strategy,
-    render_opt_engine,
+    render_opt_brightness_override,
 )
 from ..api.ui.about import AboutPanel
 from ..api.ui.camera_set_panel import CameraSetPanel
@@ -112,11 +112,11 @@ class AddonManager:
         "blinking_frequency",
         "blinking_wave_ratio",
         "blinking_half_ratio",
-        "render_opt_preset",
-        "render_opt_brightness_override",
+        "render_opt_style",
+        "render_opt_outline",
+        "render_opt_outline_width",
         "render_opt_use_compositor",
-        "render_opt_outline_strategy",
-        "render_opt_engine",
+        "render_opt_brightness_override",
     )
 
     @staticmethod
@@ -191,12 +191,12 @@ class AddonManager:
         scene.blinking_wave_ratio = blinking_wave_ratio
         scene.blinking_half_ratio = blinking_half_ratio
 
-        # Render Optimizer
-        scene.render_opt_preset = render_opt_preset
-        scene.render_opt_brightness_override = render_opt_brightness_override
+        # Render Optimizer (Smart Toon)
+        scene.render_opt_style = render_opt_style
+        scene.render_opt_outline = render_opt_outline
+        scene.render_opt_outline_width = render_opt_outline_width
         scene.render_opt_use_compositor = render_opt_use_compositor
-        scene.render_opt_outline_strategy = render_opt_outline_strategy
-        scene.render_opt_engine = render_opt_engine
+        scene.render_opt_brightness_override = render_opt_brightness_override
 
     @staticmethod
     def unregister_scene():

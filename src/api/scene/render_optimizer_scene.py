@@ -1,19 +1,44 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2025, https://github.com/skys-mission and Half-Bottled Reverie
+# Copyright (c) 2026, https://github.com/skys-mission and Half-Bottled Reverie
 """
 Render Optimizer Scene Properties
 """
 import bpy  # pylint: disable=import-error
 
-render_opt_preset = bpy.props.EnumProperty(
-    name="Preset",
-    description="Render style preset",
+render_opt_style = bpy.props.EnumProperty(
+    name="Toon Style",
+    description="Cel shading style preset",
     items=[
-        ('PBR', "PBR Realistic", "Standard PBR material enhancement"),
-        ('PBR_AGGRESSIVE', "PBR Aggressive", "Significantly enhanced texture and contrast"),
-        ('NPR', "NPR Toon", "Preserve native MMD toon + outline"),
+        ('STANDARD', "Standard", "Classic two-tone anime shading"),
+        ('SOFT', "Soft", "Softer three-tone shading with gentle shadows"),
+        ('CONTRAST', "Contrast", "Hard two-tone shading with deep shadows"),
     ],
-    default='PBR',
+    default='STANDARD',
+)
+
+render_opt_outline = bpy.props.EnumProperty(
+    name="Outline",
+    description="Outline strategy",
+    items=[
+        ('SOLIDIFY', "Solidify (Fast)", "Inverted hull outline, real-time in EEVEE"),
+        ('FREESTYLE', "Freestyle (Quality)", "Topology-aware line art, slower render"),
+        ('NONE', "None", "No outline"),
+    ],
+    default='SOLIDIFY',
+)
+
+render_opt_outline_width = bpy.props.FloatProperty(
+    name="Outline Width",
+    description="Outline thickness multiplier (Solidify mode only)",
+    default=0.5,
+    min=0.2,
+    max=5.0,
+)
+
+render_opt_use_compositor = bpy.props.BoolProperty(
+    name="Compositor Post",
+    description="Enable light bloom and contrast post-processing",
+    default=True,
 )
 
 render_opt_brightness_override = bpy.props.EnumProperty(
@@ -26,31 +51,4 @@ render_opt_brightness_override = bpy.props.EnumProperty(
         ('DARK', "Dark", "Model is overall dark-colored"),
     ],
     default='AUTO',
-)
-
-render_opt_use_compositor = bpy.props.BoolProperty(
-    name="Compositor Post",
-    description="Enable bloom, vignette, contrast",
-    default=True,
-)
-
-render_opt_outline_strategy = bpy.props.EnumProperty(
-    name="Outline",
-    description="Outline strategy (NPR mode only)",
-    items=[
-        ('none', "None", "No outline"),
-        ('freestyle_silhouette', "Freestyle Silhouette", "Silhouette only"),
-        ('freestyle_auto', "Freestyle Auto", "Topology-aware auto strategy"),
-    ],
-    default='freestyle_auto',
-)
-
-render_opt_engine = bpy.props.EnumProperty(
-    name="Engine",
-    description="Render engine",
-    items=[
-        ('EEVEE', "EEVEE", "Blender EEVEE Next (Fast)"),
-        ('CYCLES', "Cycles", "Blender Cycles (High Quality)"),
-    ],
-    default='EEVEE',
 )

@@ -25,7 +25,7 @@ _WINDOW_CACHE = {}
 
 
 def load_audio(file_path):
-    """读取 PCM WAV 音频，返回 (归一化到 [-1, 1] 的采样列表, 采样率)。"""
+    """读取 PCM WAV 音频，返回 (归一化到 [-1, 1] 的 array('d') 采样序列, 采样率)。"""
     with wave.open(file_path, "rb") as wav_file:
         channels = wav_file.getnchannels()
         sample_width = wav_file.getsampwidth()
@@ -39,46 +39,52 @@ def load_audio(file_path):
 
 
 def _decode_pcm_samples(raw_data, sample_width):
-    """将小端 PCM 字节流解码为 [-1.0, 1.0] 范围的浮点采样列表。"""
+    """将小端 PCM 字节流解码为 [-1.0, 1.0] 范围的 array('d') 采样序列。
+
+    采样以 double 紧凑存储（8 字节/采样），避免百万级 Python float
+    对象带来的内存膨胀；除以 2 的幂为精确缩放，数值与此前列表实现一致。
+    """
     if sample_width == 1:
-        return [(byte - 128) / 128.0 for byte in raw_data]
-    if sample_width == 2:
-        unpacked = array.array("h")
+        return array.array("d", ((byte - 128) / 128.0 for byte in raw_data))
+    if sample_width not in (2, 3, 4):
+        raise ValueError(f"Unsupported PCM sample width: {sample_width}")
+
+    scale = 1.0 / (1 << (sample_width * 8 - 1))
+    # 16/32-bit 走定宽整数数组快速解包（itemsize 与平台相关，不满足时回退通用路径）
+    typecode = {2: "h", 4: "i"}.get(sample_width)
+    if typecode is not None and array.array(typecode).itemsize == sample_width:
+        unpacked = array.array(typecode)
         unpacked.frombytes(raw_data)
         if sys.byteorder != "little":
             unpacked.byteswap()
-        return [value / 32768.0 for value in unpacked]
-    if sample_width == 3:
-        return [
-            int.from_bytes(raw_data[offset:offset + 3], "little", signed=True) / 8388608.0
-            for offset in range(0, len(raw_data), 3)
-        ]
-    if sample_width == 4:
-        unpacked = array.array("i")
-        unpacked.frombytes(raw_data)
-        if sys.byteorder != "little":
-            unpacked.byteswap()
-        return [value / 2147483648.0 for value in unpacked]
-    raise ValueError(f"Unsupported PCM sample width: {sample_width}")
+        return array.array("d", (value * scale for value in unpacked))
+
+    return array.array("d", (
+        int.from_bytes(raw_data[offset:offset + sample_width], "little", signed=True) * scale
+        for offset in range(0, len(raw_data), sample_width)
+    ))
 
 
 def _downmix_to_mono(samples, channels):
     """将交错的多声道采样混缩为单声道。"""
-    return [
+    return array.array("d", (
         sum(samples[offset:offset + channels]) / channels
         for offset in range(0, len(samples), channels)
-    ]
+    ))
 
 
 def frame_signal(samples, frame_length, hop_length):
-    """将采样序列切分为固定长度的重叠帧，尾部不足一帧的采样被丢弃。"""
+    """惰性生成固定长度的重叠帧，尾部不足一帧的采样被丢弃。
+
+    逐帧 yield 切片而非物化全部帧（重叠分帧会放大数倍引用），
+    调用方顺序消费时内存占用与帧数无关。
+    """
     if len(samples) < frame_length:
-        samples = samples + [0.0] * (frame_length - len(samples))
+        samples = list(samples)
+        samples.extend([0.0] * (frame_length - len(samples)))
     frame_count = 1 + (len(samples) - frame_length) // hop_length
-    return [
-        samples[start:start + frame_length]
-        for start in range(0, frame_count * hop_length, hop_length)
-    ]
+    for start in range(0, frame_count * hop_length, hop_length):
+        yield samples[start:start + frame_length]
 
 
 def _hann_window(size):
@@ -211,7 +217,7 @@ def rosa(audio_path, db_threshold=-50, rms_threshold=0.01):  # pylint: disable=t
     results = []
     for index, frame in enumerate(frames):
         windowed = [sample * weight for sample, weight in zip(frame, window)]
-        frame_rms = math.sqrt(sum(value * value for value in windowed) / FRAME_LENGTH)
+        frame_rms = math.sqrt(sum([value * value for value in windowed]) / FRAME_LENGTH)
         frame_db = 20.0 * math.log10(frame_rms + 1e-10)
         openness = compute_openness(frame_db, frame_rms, db_threshold, rms_threshold)
         timestamp = round(((index * HOP_LENGTH) + (FRAME_LENGTH / 2.0)) / sr, 4)

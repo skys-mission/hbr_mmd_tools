@@ -8,7 +8,7 @@
 [![Bandit](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/bandit.yml/badge.svg)](https://github.com/skys-mission/hbr_mmd_tools/actions/workflows/bandit.yml)
 
 **A Blender add-on for MikuMikuDance (MMD) workflows.**
-Generate lip-sync keyframes from audio, create natural random blinking, optimize renders with one-click PBR/NPR setup, and manage shape keys for MMD-style characters.
+Generate lip-sync keyframes from audio, create natural random blinking, render anime-style cel shading with one-click smart toon setup, and manage shape keys for MMD-style characters.
 
 Other languages: [简体中文](README_zh.md), [日本語](README_ja.md)
 
@@ -20,7 +20,7 @@ Other languages: [简体中文](README_zh.md), [日本語](README_ja.md)
 |---|---|---|
 | **MMD Lip-Sync** | Audio-driven mouth shape keyframe generation (あいうえおん) via formant and energy analysis; supports file or VSE timeline audio input | v0.3 |
 | **Random Blinking** | Gaussian-distributed natural blinking with half-blink and double-blink support | v0.5 |
-| **Render Optimizer** *(Experimental)* | One-click adaptive lighting, PBR/NPR material enhancement, world & compositor setup | v0.5 |
+| **Smart Toon Render** *(Experimental)* | One-click EEVEE cel shading: model detection, toon materials, outline, lighting & light post | v0.6 |
 | **Render Presets** | Quick resolution, aspect ratio and orientation presets | v0.5 |
 | **Camera Settings** | Focal length, aperture and depth-of-field presets | v0.5 |
 
@@ -34,7 +34,7 @@ Other languages: [简体中文](README_zh.md), [日本語](README_ja.md)
 ![Blink Settings](.img/blink_args.webp)
 
 ### Render Optimizer *(Experimental)*
-> One-click setup for EEVEE / Cycles with adaptive 6-point lighting and smart material classification.
+> One-click EEVEE cel shading: auto-detects MMD / VRM / generic models, posterized toon materials, real-time Solidify outline.
 
 ---
 
@@ -114,23 +114,24 @@ Generates natural blinking keyframes for the `まばたき` shape key.
 
 ---
 
-### Render Optimizer *(Experimental)*
+### Smart Toon Render *(Experimental)*
 
-One-click render setup optimized for MMD-style characters.
+One-click cel shading for MMD-style characters (EEVEE only, performance-first).
 
-**Presets:**
-- **PBR** — Photorealistic rendering with enhanced skin, hair, metal and cloth materials.
-- **PBR Aggressive** — Stronger material differentiation for dramatic lighting.
-- **NPR** — Toon-shaded style with Freestyle outline support.
+**Style presets:**
+- **Standard** — Classic two-tone anime shading.
+- **Soft** — Softer three-tone shading with gentle shadows.
+- **Contrast** — Hard two-tone shading with deep shadows.
 
 **Features:**
-- **Adaptive 6-Point Lighting** — Key, Fill, Rim, Hair, Back, Front lights auto-positioned based on character height.
-- **Smart Material Classification** — Automatically detects skin, hair, metal, jewelry, eyes, cloth and applies tuned Principled BSDF values.
-- **Tone-Aware World** — Cool / warm / neutral world environment based on model color analysis.
-- **Compositor Setup** — Automatic vignette and color grading nodes.
-- **Engine Selection** — EEVEE or Cycles.
+- **Model Type Detection** — Distinguishes MMD (mmd_tools imports), VRM and generic models, each with its own base-color extraction strategy.
+- **Smart Toon Materials** — Keeps original textures and applies semantic per-category ramp tuning: brighter faces, highlight band on hair, nearly self-lit eyes.
+- **Missing-Asset Fallbacks** — Broken or missing textures fall back to diffuse colors; meshes without materials get a default toon material; alpha channels are preserved automatically.
+- **Solidify Inverted-Hull Outline** — Real-time EEVEE outline (default), reusing the per-vertex `mmd_edge_scale` weights from MMD imports; optional Freestyle for higher quality.
+- **3-Point Toon Lighting** — Only the key sun casts shadows; area lights aim at the character automatically.
+- **Light Post** — Slight contrast and low-quality bloom; conservative samples, ray tracing off.
 
-> **Warning:** This creates auto-named lights and world nodes. Use the **Reset** button to clean them up.
+> **Warning:** Material conversion rebuilds node trees (restore with Undo / Ctrl+Z). The **Reset** button removes auto-created lights, outlines, world and compositor setup.
 
 ---
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2025, https://github.com/skys-mission and Half-Bottled Reverie
+# Copyright (c) 2026, https://github.com/skys-mission and Half-Bottled Reverie
 """
-MMD Render Optimizer — Operators
+MMD Smart Toon Render — Operators
 """
 from bpy.types import Operator  # pylint: disable=import-error
 
@@ -13,10 +13,13 @@ from ...util.logger import Log
 
 
 class RenderOptimizerApplyOperator(Operator):  # pylint: disable=too-few-public-methods
-    """Apply MMD render optimization"""
+    """Apply smart toon render (one-click cel shading)"""
     bl_idname = "hbr_mmd.render_optimizer_apply"
-    bl_label = "Apply Optimization"
-    bl_description = "Automatically optimize scene rendering based on current settings"
+    bl_label = "Apply Toon Render"
+    bl_description = (
+        "One-click smart cel shading: converts materials, adds outline, "
+        "lights and post-processing (EEVEE only)"
+    )
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -25,7 +28,7 @@ class RenderOptimizerApplyOperator(Operator):  # pylint: disable=too-few-public-
         return len(context.selected_objects) > 0
 
     def execute(self, context):
-        """Apply render optimization and report results."""
+        """Apply toon render setup and report results."""
         context.window_manager.progress_begin(0, 100)
         context.window.cursor_modal_set('WAIT')
         context.window_manager.progress_update(50)
@@ -36,10 +39,15 @@ class RenderOptimizerApplyOperator(Operator):  # pylint: disable=too-few-public-
             outline_info = result['outline_info']
 
             report = (
-                f"Optimized {mat_stats['total']} materials, "
-                f"classified: {mat_stats['classified']}, "
-                f"fallback: {mat_stats['fallback']}"
+                f"[{result['model_type']}] Toon-shaded {mat_stats['total']} materials "
+                f"(textured: {mat_stats['textured']}, "
+                f"color-fallback: {mat_stats['fallback_color']}, "
+                f"alpha: {mat_stats['alpha']})"
             )
+            if mat_stats.get('skipped'):
+                report += f" | Skipped: {mat_stats['skipped']}"
+            if mat_stats.get('fallback_meshes'):
+                report += f" | No-material meshes: {mat_stats['fallback_meshes']}"
             if outline_info.get('enabled'):
                 report += f" | Outline: {outline_info['strategy']}"
             report += f" | Tone: {result['tone']}, Brightness: {result['brightness']}"
@@ -56,10 +64,13 @@ class RenderOptimizerApplyOperator(Operator):  # pylint: disable=too-few-public-
 
 
 class RenderOptimizerResetOperator(Operator):  # pylint: disable=too-few-public-methods
-    """Reset render optimizer changes"""
+    """Reset toon render changes"""
     bl_idname = "hbr_mmd.render_optimizer_reset"
     bl_label = "Reset"
-    bl_description = "Delete auto-created lights, reset World, disable Compositor and Freestyle"
+    bl_description = (
+        "Delete auto-created lights and outlines, reset World, disable Compositor "
+        "(toon-shaded materials can be restored with Undo)"
+    )
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, _context):
