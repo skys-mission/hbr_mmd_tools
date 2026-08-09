@@ -131,7 +131,7 @@ One-click cel shading for MMD-style characters (EEVEE only, performance-first).
 |---|---|
 | **Toon Style** | **Standard** (classic two-tone), **Soft** (three-tone, gentle shadows), **Contrast** (hard two-tone, deep shadows) |
 | **Outline** | **Solidify (Fast)**: real-time inverted-hull outline (default); **Freestyle (Quality)**: topology-aware line art, slower; **None** |
-| **Outline Width** | Thickness multiplier (0.2–5.0, default 0.25), auto-scaled by character height; Solidify mode only |
+| **Outline Width** | Thickness multiplier (0.05–5.0, default 0.15), auto-scaled by character height; Solidify mode only |
 | **Brightness** | Advanced: override the automatic brightness detection (Auto / Light / Medium / Dark) |
 | **Compositor Post** | Advanced: light bloom and contrast post-processing |
 

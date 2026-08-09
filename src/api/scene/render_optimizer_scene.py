@@ -30,8 +30,8 @@ render_opt_outline = bpy.props.EnumProperty(
 render_opt_outline_width = bpy.props.FloatProperty(
     name="Outline Width",
     description="Outline thickness multiplier (Solidify mode only)",
-    default=0.25,
-    min=0.2,
+    default=0.15,
+    min=0.05,
     max=5.0,
 )
 

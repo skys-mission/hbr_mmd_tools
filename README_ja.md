@@ -134,7 +134,7 @@ MMD スタイルのキャラクター向けワンクリックセルシェーデ�
 |---|---|
 | **Toon Style** | **Standard**（定番の 2 トーン）、**Soft**（3 トーン、柔らかな影）、**Contrast**（ハードな 2 トーン、深い影） |
 | **Outline** | **Solidify (Fast)**：リアルタイム反転ハルアウトライン（既定）；**Freestyle (Quality)**：トポロジ認識の線画、低速；**None** |
-| **Outline Width** | 太さ係数（0.2–5.0、既定 0.25）。キャラクターの身長に応じて自動スケール。Solidify のみ |
+| **Outline Width** | 太さ係数（0.05–5.0、既定 0.15）。キャラクターの身長に応じて自動スケール。Solidify のみ |
 | **Brightness** | 高度：明るさの自動検出を上書き（Auto / Light / Medium / Dark） |
 | **Compositor Post** | 高度：軽量 Bloom とコントラストのポスト処理 |
 
