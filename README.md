@@ -195,7 +195,7 @@ python3 tools/build_release.py
 ### AI-Assisted Development
 
 This project is developed with a heavy **vibe-coding** workflow (\>70% of code contributions).  
-The primary IDE/tool used is **Claude Code**; however, **Claude models are not used** as the generation backend.  
+**No Claude models were used** during development; the **Claude Code** tool was only used for part of the development **before v0.4.1** (connected to third-party models).  
 LLM inference is mainly provided by **Kimi** and **DeepSeek**.
 
 ---
