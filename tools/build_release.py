@@ -224,7 +224,7 @@ def main(argv=None):
     """入口：解析参数并构建所有目标平台的 zip。"""
     parser = argparse.ArgumentParser(description="构建 HBR MMD Tools release 压缩包")
     parser.add_argument(
-        "--tag", help="发布 tag（如 v0.5.1），用于版本校验与更新日志链接"
+        "--tag", help="发布 tag（如 v0.5.5），用于版本校验与更新日志链接"
     )
     parser.add_argument(
         "--platform", choices=("win-x64", "mac-arm64"),
