@@ -135,6 +135,8 @@ One-click cel shading for MMD-style characters (EEVEE only, performance-first).
 | **Brightness** | Advanced: override the automatic brightness detection (Auto / Light / Medium / Dark) |
 | **Compositor Post** | Advanced: light bloom and contrast post-processing |
 
+> **Tip:** For final renders, prefer the **Freestyle (Quality)** outline — it follows the mesh topology for cleaner line art. Solidify is best kept for quick previews.
+
 **Features:**
 - **Model Type Detection** — Distinguishes MMD (mmd_tools imports), VRM and generic models, each with its own base-color extraction strategy.
 - **Smart Toon Materials** — Keeps original textures and applies semantic per-category ramp tuning: brighter faces, highlight band on hair, nearly self-lit eyes.
