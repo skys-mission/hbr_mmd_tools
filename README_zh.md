@@ -201,7 +201,7 @@ python3 tools/build_release.py
 ### AI 辅助开发
 
 本项目采用重度 **vibe-coding** 工作流（代码贡献占比 \>70%）。  
-开发过程中**未使用 Claude 模型**；仅在 **0.4.1 之前**的部分开发中使用过 **Claude Code** 工具（接入第三方模型）。  
+开发过程中**未使用 Claude 模型**；仅在 **0.5.1 之前**的部分开发中使用过 **Claude Code** 工具（接入第三方模型）。  
 大模型推理主要由 **Kimi** 与 **DeepSeek** 提供。
 
 ---
