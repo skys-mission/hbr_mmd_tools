@@ -49,7 +49,12 @@ class MMDHelperPanel(bpy.types.Panel):  # pylint: disable=too-few-public-methods
             layout.prop(scene, "lips_start_frame")
         else:
             layout.prop(scene, "lips_timeline_audio_strip")
-            strip = _find_timeline_audio_strip(scene)
+            try:
+                strip = _find_timeline_audio_strip(scene)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                # 枚举读取等异常不能中断面板绘制，否则预设和生成按钮会一起消失
+                Log.warning(f"Failed to resolve timeline audio strip: {e}")
+                strip = None
             if strip is not None:
                 layout.label(
                     text=f"Audio starts at frame {int(strip.frame_final_start)}",

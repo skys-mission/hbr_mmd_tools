@@ -11,6 +11,18 @@ from ...core.sequencer import find_strip_by_name, get_scene_strips, get_strip_au
 from ...util.logger import Log
 
 
+# bpy 动态枚举的已知缺陷：RNA 不持有 items 回调返回的字符串引用，
+# Python 侧释放后下拉框显示乱码，甚至让当前值匹配失败、读取枚举抛异常，
+# 进而中断面板绘制。最近一次返回的 items 必须保持存活（按枚举键缓存）。
+_ENUM_ITEMS_KEEPALIVE = {}
+
+
+def _keepalive_enum_items(key, items):
+    """缓存并返回枚举 items，防止 RNA 持有悬垂字符串指针。"""
+    _ENUM_ITEMS_KEEPALIVE[key] = items
+    return items
+
+
 def get_timeline_audio_items(self, context):
     """从 VSE 时间线动态获取音频片段列表。
 
@@ -29,7 +41,7 @@ def get_timeline_audio_items(self, context):
         items.insert(0, ("", "None", "No audio strip selected"))
     else:
         items.append(("", "None", "No audio strips found"))
-    return items
+    return _keepalive_enum_items("timeline_audio", items)
 
 
 def _build_timeline_audio_items(scene):
@@ -49,16 +61,26 @@ def _build_timeline_audio_items(scene):
     return items
 
 
+def _read_timeline_strip_value(scene):
+    """读取时间线片段枚举的当前值，存储值不在当前 items 中时按空处理。"""
+    try:
+        return scene.lips_timeline_audio_strip
+    except TypeError:
+        # 旧版 .blend 存的 "channel:name" 可能不在当前 items 中，读取会抛异常
+        return ""
+
+
 def _sanitize_timeline_strip_selection(scene):
     """确保时间线音频片段选择与当前 VSE 内容一致。"""
     strips = [
         strip for strip in get_scene_strips(scene)
         if get_strip_audio_filepath(strip)
     ]
-    strip = find_strip_by_name(strips, scene.lips_timeline_audio_strip)
+    current = _read_timeline_strip_value(scene)
+    strip = find_strip_by_name(strips, current)
     if strip is not None:
         # 旧版 "channel:name" 形式规范化为纯名称
-        if scene.lips_timeline_audio_strip != strip.name:
+        if current != strip.name:
             scene.lips_timeline_audio_strip = strip.name
         return
     scene.lips_timeline_audio_strip = strips[0].name if strips else ""
@@ -100,10 +122,10 @@ def get_lips_config_files(_self, _context):
     """获取口型配置文件列表"""
     config_manager = get_config_manager()
     config_files = config_manager.get_config_entries('lip_sync')
-    return [
+    return _keepalive_enum_items("lips_config", [
         (config['id'], config['display_name'], config['description'])
         for config in config_files
-    ]
+    ])
 
 lips_config_selection = bpy.props.EnumProperty(
     name="Lip Sync Config",
@@ -124,10 +146,10 @@ def get_blink_config_files(_self, _context):
     """获取眨眼配置文件列表"""
     config_manager = get_config_manager()
     config_files = config_manager.get_config_entries('blink')
-    return [
+    return _keepalive_enum_items("blink_config", [
         (config['id'], config['display_name'], config['description'])
         for config in config_files
-    ]
+    ])
 
 blink_config_selection = bpy.props.EnumProperty(
     name="Blink Config",
