@@ -28,6 +28,32 @@ MMD_EDGE_SCALE_GROUP = 'mmd_edge_scale'
 # 标记过的 Freestyle 面所属的 mesh 自定义属性（清理时只碰我们标记过的）
 _FS_MARK_PROP = 'hbr_fs_marked'
 
+# Freestyle 面标记的存储在 5.x 从 MeshPolygon.use_freestyle_mark RNA 属性
+# 迁移为名为 freestyle_face 的布尔 FACE 域 mesh 属性；4.x 仍走 RNA 属性
+_HAS_FS_FACE_MARK_PROP = hasattr(bpy.types.MeshPolygon, 'use_freestyle_mark')
+_FS_FACE_ATTR = 'freestyle_face'
+
+
+def _get_face_mark(mesh, poly):
+    """读取单面的 Freestyle 面标记（4.x RNA 属性 / 5.x 命名属性）。"""
+    if _HAS_FS_FACE_MARK_PROP:
+        return poly.use_freestyle_mark
+    attr = mesh.attributes.get(_FS_FACE_ATTR)
+    return bool(attr.data[poly.index].value) if attr is not None else False
+
+
+def _set_face_mark(mesh, poly, value):
+    """写入单面的 Freestyle 面标记，5.x 下按需创建 freestyle_face 属性。"""
+    if _HAS_FS_FACE_MARK_PROP:
+        poly.use_freestyle_mark = value
+        return
+    attr = mesh.attributes.get(_FS_FACE_ATTR)
+    if attr is None:
+        if not value:
+            return
+        attr = mesh.attributes.new(name=_FS_FACE_ATTR, type='BOOLEAN', domain='FACE')
+    attr.data[poly.index].value = value
+
 
 def _is_decal_material(mat):
     """判断材质是否为贴花（平涂叠层）。
@@ -211,8 +237,8 @@ def _clear_freestyle_marks():
         if _FS_MARK_PROP not in mesh:
             continue
         for poly in mesh.polygons:
-            if poly.use_freestyle_mark:
-                poly.use_freestyle_mark = False
+            if _get_face_mark(mesh, poly):
+                _set_face_mark(mesh, poly, False)
         del mesh[_FS_MARK_PROP]
 
 
@@ -237,9 +263,9 @@ def _mark_decal_faces(meshes):
         marked = False
         for poly in mesh.polygons:
             if (poly.material_index in decal_slots
-                    and not poly.use_freestyle_mark
+                    and not _get_face_mark(mesh, poly)
                     and all(v in only_decal for v in poly.vertices)):
-                poly.use_freestyle_mark = True
+                _set_face_mark(mesh, poly, True)
                 marked = True
         if marked:
             mesh[_FS_MARK_PROP] = True
