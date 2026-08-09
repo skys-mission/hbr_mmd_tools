@@ -1,0 +1,20 @@
+{
+  "ffmpeg_version": "8.1.2",
+  "comment": "Pinned FFmpeg 8.1.2 static builds. 8.1.2 = latest patch of the 8.x branch (CVE-2026-8461 / CVE-2026-30999 fixed); 9.0 is the newest major and intentionally not used. Both sources are GPLv3 static builds; sha256 verified 2026-08-09.",
+  "platforms": {
+    "win-x64": {
+      "url": "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip",
+      "sha256": "db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec",
+      "archive_member": "ffmpeg-8.1.2-essentials_build/bin/ffmpeg.exe",
+      "binary_name": "ffmpeg.exe",
+      "source": "https://www.gyan.dev/ffmpeg/builds/ (essentials build, GPLv3 static)"
+    },
+    "mac-arm64": {
+      "url": "https://ffmpeg.martin-riedl.de/download/macos/arm64/1783011502_8.1.2/ffmpeg.zip",
+      "sha256": "ef1aa60006c7b77ce170c1608c08d8e4ba1c30c5746f2ac986ded932d0ac2c3c",
+      "archive_member": "ffmpeg",
+      "binary_name": "ffmpeg",
+      "source": "https://ffmpeg.martin-riedl.de/ (release build, GPLv3 static, signed)"
+    }
+  }
+}
