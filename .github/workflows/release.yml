@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags: [ "v*" ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "已存在的 tag（如 v0.5.5）"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.tag || github.ref }}
+        fetch-depth: 0
+    - name: Determine tag
+      id: meta
+      run: |
+        TAG="${{ inputs.tag || github.ref_name }}"
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+    - name: Build release zips
+      run: python3 tools/build_release.py --tag "$TAG"
+    - name: Create draft release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG="${{ steps.meta.outputs.tag }}"
+        PRERELEASE_FLAG=""
+        case "$TAG" in
+          *-*) PRERELEASE_FLAG="--prerelease" ;;
+        esac
+        # shellcheck disable=SC2086
+        gh release create "$TAG" --draft $PRERELEASE_FLAG \
+          --title "$TAG" --notes-file dist/release_notes.md dist/*.zip

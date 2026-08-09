@@ -10,7 +10,7 @@ from .src.core.compat import ensure_supported_blender_version
 bl_info = {
     "name": "HBR MMD Tools",
     "author": "Half-Bottled Reverie, github.com/skys-mission",
-    "version": (0, 5, 1),
+    "version": (0, 5, 5),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > HBR MMD Tools",
     "description": "Blender add-on for MMD lip sync, random blinking, and related workflow tools.",

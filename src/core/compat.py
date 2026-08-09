@@ -41,3 +41,26 @@ def ensure_supported_blender_version(
             f"current version is {current}. "
             f"Blender {threshold}+ has not been verified yet."
         )
+
+
+def get_action_fcurves(anim_data):
+    """
+    跨版本获取动画数据的 FCurve 集合。
+
+    4.4 引入 slotted Action，5.0 移除了旧版 ``action.fcurves`` 直访。
+    优先特征检测旧 API（4.2-4.5 行为完全不变），不存在时改走
+    channelbag（5.0 起唯一路径）。无 action 或取不到时返回 None。
+    """
+    action = getattr(anim_data, 'action', None)
+    if action is None:
+        return None
+    fcurves = getattr(action, 'fcurves', None)
+    if fcurves is not None:
+        return fcurves
+    # 5.0+：action.fcurves 已移除，经 channelbag 访问
+    from bpy_extras import anim_utils  # pylint: disable=import-outside-toplevel,import-error
+    slot = getattr(anim_data, 'action_slot', None)
+    if slot is None:
+        return None
+    channelbag = anim_utils.action_get_channelbag_for_slot(action, slot)
+    return channelbag.fcurves if channelbag is not None else None

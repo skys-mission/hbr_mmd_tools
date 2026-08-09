@@ -4,10 +4,14 @@
 口型生成服务。
 """
 
+import os
+
 from ..audio.lips import Lips
+from ..core.compat import get_action_fcurves
 from ..core.config_manager import get_config_manager
 from ..core.config_schema import CANONICAL_LIP_SYNC_KEYS
 from ..core.lip_sync_profiles import get_lip_sync_preset_values
+from ..core.sequencer import find_strip_by_name, get_scene_strips, get_strip_audio_filepath
 from .selection_service import (
     clear_shape_key_keyframes_in_range,
     find_selected_meshes_with_shape_keys,
@@ -69,28 +73,29 @@ def generate_lip_sync(context):
 
 def _find_timeline_audio_strip(scene):
     """根据场景属性查找选中的时间线音频片段。"""
-    se = scene.sequence_editor
-    if not se:
-        return None
-    selected_uid = scene.lips_timeline_audio_strip
-    if not selected_uid:
-        return None
-    for strip in se.sequences:
-        uid = f"{strip.channel}:{strip.name}"
-        if uid == selected_uid:
-            return strip
-    return None
+    return find_strip_by_name(
+        get_scene_strips(scene),
+        scene.lips_timeline_audio_strip,
+    )
 
 
 def _resolve_audio_path(scene):
-    """根据音频源设置解析音频文件路径。"""
+    """根据音频源设置解析音频文件路径。
+
+    统一经 bpy.path.abspath 展开 Blender 相对路径（// 前缀），再做用户目录
+    展开与规范化：文件选择器在用户开启"相对路径"偏好时会存成 // 开头的路径，
+    Windows 上原样传给 os.path.isfile 会被当作 UNC 路径而误判不存在。
+    """
     import bpy  # pylint: disable=import-outside-toplevel,import-error
 
     if scene.lips_audio_source == 'file':
-        path = scene.lips_audio_path
+        # 去掉首尾空白与成对引号（Windows"复制路径"会带引号）
+        path = (scene.lips_audio_path or "").strip().strip('"').strip()
         if not path:
             raise ValueError("No audio file path specified")
-        return path
+        abs_path = os.path.normpath(os.path.expanduser(bpy.path.abspath(path)))
+        Log.info(f"File audio resolved: {abs_path}")
+        return abs_path
 
     # timeline mode
     strip = _find_timeline_audio_strip(scene)
@@ -100,16 +105,11 @@ def _resolve_audio_path(scene):
             "Please add audio to the VSE timeline and select a strip."
         )
 
-    filepath = None
-    if strip.type == 'SOUND':
-        filepath = getattr(strip.sound, 'filepath', None)
-    elif strip.type == 'MOVIE':
-        filepath = getattr(getattr(strip, 'sound', None), 'filepath', None)
-
+    filepath = get_strip_audio_filepath(strip)
     if not filepath:
         raise ValueError(f"Selected strip '{strip.name}' has no valid audio filepath.")
 
-    abs_path = bpy.path.abspath(filepath)
+    abs_path = os.path.normpath(os.path.expanduser(bpy.path.abspath(filepath)))
     Log.info(f"Timeline audio resolved: {strip.name} -> {abs_path}")
     return abs_path
 
@@ -163,22 +163,20 @@ def set_lips_to_mesh_with_config(mesh, lips, start_frame, config):  # pylint: di
             Log.warning(f"Target shape key '{target_morph_key}' not found in mesh")
             continue
 
-        for morph_frame in morph_frames:
-            if morph_frame["frame"] < start:
-                continue
-            set_shape_key_value(
-                obj=mesh,
-                shape_key_name=target_morph_key,
-                value=morph_frame["value"],
-                frame=morph_frame["frame"],
-                f_type=morph_frame["frame_type"],
-            )
+        track = [
+            morph_frame for morph_frame in morph_frames
+            if morph_frame["frame"] >= start
+        ]
+        set_shape_key_track(mesh, target_morph_key, track)
 
 
 def _build_target_tracks(lips, shape_key_mapping, adjustment_rules):
     target_tracks = {}
     for source_key in CANONICAL_LIP_SYNC_KEYS:
-        target_morph_key = shape_key_mapping.get(source_key, source_key)
+        target_morph_key = shape_key_mapping.get(source_key)
+        if target_morph_key is None:
+            # 配置未覆盖的规范键直接跳过（如 VRM 标准没有 ん），避免对不存在的形态键告警。
+            continue
         target_track = target_tracks.setdefault(target_morph_key, {})
         adjustment_rule = adjustment_rules.get(source_key, {})
 
@@ -215,8 +213,13 @@ def _apply_adjustment_rule(value, rule):
     return min(max(adjusted_value, 0.0), 0.99)
 
 
-def set_shape_key_value(obj, shape_key_name, value, frame, f_type):  # pylint: disable=unused-argument
-    """设置指定对象的形态键值。"""
+def set_shape_key_track(obj, shape_key_name, track):
+    """将整条形态键动画轨道批量写入对象。
+
+    首点经 keyframe_insert 写入（跨 4.2-5.2 创建 fcurve/slot 的稳妥入口），
+    其余点用 keyframe_points.add + foreach_set 批量写入，避免逐点插入时
+    反复排序与手柄重算。fcurve 上残留范围外旧点（集合序不可控）时回退逐点插入。
+    """
     if not obj or obj.type != "MESH":
         Log.warning("The object is not of the mesh type.")
         return
@@ -225,7 +228,43 @@ def set_shape_key_value(obj, shape_key_name, value, frame, f_type):  # pylint: d
     if not shape_keys or shape_key_name not in shape_keys.key_blocks:
         Log.warning(f"The shape key '{shape_key_name}' does not exist.")
         return
+    if not track:
+        return
 
     shape_key = shape_keys.key_blocks[shape_key_name]
-    shape_key.value = value
-    shape_key.keyframe_insert(data_path="value", frame=frame)
+    first = track[0]
+    shape_key.value = first["value"]
+    shape_key.keyframe_insert(data_path="value", frame=first["frame"])
+
+    data_path = f'key_blocks["{shape_key.name}"].value'
+    fcurve = _find_shape_key_fcurve(shape_key, data_path)
+    if fcurve is None or len(fcurve.keyframe_points) != 1:
+        for point in track[1:]:
+            shape_key.value = point["value"]
+            shape_key.keyframe_insert(data_path="value", frame=point["frame"])
+        return
+
+    points = fcurve.keyframe_points
+    points.add(len(track) - 1)
+    flat_coordinates = [0.0] * (2 * len(track))
+    for index, point in enumerate(track):
+        flat_coordinates[2 * index] = float(point["frame"])
+        flat_coordinates[2 * index + 1] = float(point["value"])
+    points.foreach_set("co", flat_coordinates)
+    for point in points:
+        point.interpolation = "BEZIER"
+        point.handle_left_type = "AUTO_CLAMPED"
+        point.handle_right_type = "AUTO_CLAMPED"
+    fcurve.update()
+
+
+def _find_shape_key_fcurve(shape_key, data_path):
+    """在形态键所属 Key 数据块的动画数据中查找指定 fcurve。"""
+    anim_data = shape_key.id_data.animation_data
+    fcurves = get_action_fcurves(anim_data) if anim_data else None
+    if not fcurves:
+        return None
+    for candidate in fcurves:
+        if candidate.data_path == data_path:
+            return candidate
+    return None

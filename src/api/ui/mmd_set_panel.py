@@ -46,16 +46,27 @@ class MMDHelperPanel(bpy.types.Panel):  # pylint: disable=too-few-public-methods
 
         if scene.lips_audio_source == 'file':
             layout.prop(scene, "lips_audio_path")
+            layout.prop(scene, "lips_start_frame")
         else:
             layout.prop(scene, "lips_timeline_audio_strip")
-            strip = _find_timeline_audio_strip(scene)
+            try:
+                strip = _find_timeline_audio_strip(scene)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                # 枚举读取等异常不能中断面板绘制，否则预设和生成按钮会一起消失
+                Log.warning(f"Failed to resolve timeline audio strip: {e}")
+                strip = None
             if strip is not None:
                 layout.label(
                     text=f"Audio starts at frame {int(strip.frame_final_start)}",
                     icon='INFO',
                 )
+            else:
+                layout.label(text="No audio strip selected", icon='ERROR')
+            start_row = layout.row()
+            # 时间线模式下生成时会锁定为音频片段的起始帧，仅在无片段时可编辑
+            start_row.enabled = strip is None
+            start_row.prop(scene, "lips_start_frame")
 
-        layout.prop(scene, "lips_start_frame")
         layout.prop(scene, "lips_generation_preset")
 
         layout.operator("mmd.gen_lips", text="Generate Lip Sync")

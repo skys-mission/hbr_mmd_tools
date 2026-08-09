@@ -1,0 +1,9 @@
+{
+  "name": "VRM 0.x Blink",
+  "description": "Blink config for models whose shape key uses the VRM 0.x blend shape preset name (Blink)",
+  "version": "1.0",
+  "author": "Half-Bottled Reverie",
+  "shape_keys": {
+    "blink": "Blink"
+  }
+}

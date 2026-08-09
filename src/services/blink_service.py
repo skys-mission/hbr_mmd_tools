@@ -6,6 +6,7 @@
 
 import random
 
+from ..core.compat import get_action_fcurves
 from ..core.config_manager import get_config_manager
 from .selection_service import (
     clear_shape_key_keyframes_in_range,
@@ -221,11 +222,13 @@ def apply_blink_animation_with_config(mesh, frames, start_frame, end_frame, conf
 def _set_keyframe_handles(mesh, shape_key_name):
     """设置眨眼关键帧的 handle 类型为 AUTO_CLAMPED，使贝塞尔曲线更圆润。"""
     shape_keys = mesh.data.shape_keys
-    if not shape_keys or not shape_keys.animation_data or not shape_keys.animation_data.action:
+    anim_data = shape_keys.animation_data if shape_keys else None
+    fcurves = get_action_fcurves(anim_data) if anim_data else None
+    if not fcurves:
         return
 
     data_path = f'key_blocks["{shape_key_name}"].value'
-    for fcurve in shape_keys.animation_data.action.fcurves:
+    for fcurve in fcurves:
         if fcurve.data_path != data_path:
             continue
         for kp in fcurve.keyframe_points:

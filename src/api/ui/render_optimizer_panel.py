@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2025, https://github.com/skys-mission and Half-Bottled Reverie
+# Copyright (c) 2026, https://github.com/skys-mission and Half-Bottled Reverie
 """
-MMD Render Optimizer — UI Panels
+MMD Smart Toon Render — UI Panels
 """
 import bpy  # pylint: disable=import-error
 
 
 class RenderOptimizerPanel(bpy.types.Panel):  # pylint: disable=too-few-public-methods
     """主面板"""
-    bl_label = "MMD Render Optimizer (Experimental)"
+    bl_label = "MMD Smart Toon Render (Experimental)"
     bl_idname = "OBJECT_PT_RENDER_OPTIMIZER"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -16,16 +16,21 @@ class RenderOptimizerPanel(bpy.types.Panel):  # pylint: disable=too-few-public-m
     bl_order = 4
 
     def draw(self, context):
-        """Draw the main render optimizer panel."""
+        """Draw the main toon render panel."""
         layout = self.layout
         scene = context.scene
 
-        layout.label(text="Select target model, then apply", icon='INFO')
+        layout.label(text="Select model, then apply (EEVEE only)", icon='INFO')
 
         layout.separator()
 
-        # 渲染预设
-        layout.prop(scene, "render_opt_preset")
+        # 卡通风格
+        layout.prop(scene, "render_opt_style")
+
+        # 描边
+        layout.prop(scene, "render_opt_outline")
+        if scene.render_opt_outline == 'SOLIDIFY':
+            layout.prop(scene, "render_opt_outline_width")
 
         layout.separator()
 
@@ -34,7 +39,7 @@ class RenderOptimizerPanel(bpy.types.Panel):  # pylint: disable=too-few-public-m
         row.scale_y = 1.3
         row.operator(
             "hbr_mmd.render_optimizer_apply",
-            text="Apply Optimization",
+            text="Apply Toon Render",
             icon="RENDER_STILL",
         )
 
@@ -53,7 +58,7 @@ class RenderOptimizerAdvancedPanel(bpy.types.Panel):  # pylint: disable=too-few-
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
-        """Draw the advanced render optimizer panel."""
+        """Draw the advanced toon render panel."""
         layout = self.layout
         scene = context.scene
 
@@ -62,11 +67,5 @@ class RenderOptimizerAdvancedPanel(bpy.types.Panel):  # pylint: disable=too-few-
 
         layout.separator()
 
-        # 开关选项
+        # 合成器后期
         layout.prop(scene, "render_opt_use_compositor")
-        layout.prop(scene, "render_opt_outline_strategy")
-
-        layout.separator()
-
-        # 渲染引擎
-        layout.prop(scene, "render_opt_engine")

@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "hbr_mmd_tools"
-version = "0.5.1"
+version = "0.5.5"
 name = "HBR MMD Tools"
 tagline = "MMD lip sync and workflow tools"
 maintainer = "Half-Bottled Reverie <skysmission@outlook.com>"
@@ -20,10 +20,10 @@ blender_version_min = "4.2.0"
 # 不支持 Blender 5.3+（尚未验证）
 blender_version_max = "5.2.99"
 
-# 符合 https://spdx.org/licenses/ 的许可证（使用 "SPDX: 前缀）
+# 符合 https://spdx.org/licenses/ 的许可证（使用 "SPDX:" 前缀）
 # https://docs.blender.org/manual/en/dev/advanced/extensions/licenses.html
 license = [
-    "SPDX:GPL-3.0",
+    "SPDX:GPL-3.0-or-later",
 ]
 # 可选：某些许可证要求。
 copyright = [

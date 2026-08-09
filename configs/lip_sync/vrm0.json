@@ -1,14 +1,14 @@
 {
-  "name": "VRM 1.0 Lip Sync",
-  "description": "Lip sync for models whose shape keys use VRM 1.0 expression preset names (aa/ih/ou/ee/oh)",
+  "name": "VRM 0.x Lip Sync",
+  "description": "Lip sync for models whose shape keys use VRM 0.x blend shape preset names (A/I/U/E/O)",
   "version": "1.0",
   "author": "Half-Bottled Reverie",
   "shape_keys": {
-    "a": "aa",
-    "i": "ih",
-    "u": "ou",
-    "e": "ee",
-    "o": "oh"
+    "a": "A",
+    "i": "I",
+    "u": "U",
+    "e": "E",
+    "o": "O"
   },
   "adjustment_rules": {
     "a": {

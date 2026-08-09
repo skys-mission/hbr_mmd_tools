@@ -7,30 +7,89 @@ import bpy  # pylint: disable=import-error
 
 from ...core.config_manager import get_config_manager
 from ...core.lip_sync_profiles import DEFAULT_LIP_SYNC_PRESET, get_lip_sync_preset_values
+from ...core.sequencer import find_strip_by_name, get_scene_strips, get_strip_audio_filepath
+from ...util.logger import Log
 
-def get_timeline_audio_items(_self, context):
-    """从 VSE 时间线动态获取音频片段列表。"""
-    se = context.scene.sequence_editor
-    if not se:
-        return [("", "None", "No audio strips found")]
 
+# bpy 动态枚举的已知缺陷：RNA 不持有 items 回调返回的字符串引用，
+# Python 侧释放后下拉框显示乱码，甚至让当前值匹配失败、读取枚举抛异常，
+# 进而中断面板绘制。最近一次返回的 items 必须保持存活（按枚举键缓存）。
+_ENUM_ITEMS_KEEPALIVE = {}
+
+
+def _keepalive_enum_items(key, items):
+    """缓存并返回枚举 items，防止 RNA 持有悬垂字符串指针。"""
+    _ENUM_ITEMS_KEEPALIVE[key] = items
+    return items
+
+
+def get_timeline_audio_items(self, context):
+    """从 VSE 时间线动态获取音频片段列表。
+
+    注意：枚举 items 回调拿到的 context 可能是 None，且 5.0 移除了
+    ``SequenceEditor.sequences``。这里只依赖属性所属的 Scene（self），
+    并保证异常不外抛——回调抛异常会导致面板剩余部分（包括生成按钮）无法绘制。
+    """
+    scene = self if self is not None else getattr(context, "scene", None)
+    try:
+        items = _build_timeline_audio_items(scene)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        Log.warning(f"Failed to list timeline audio strips: {e}")
+        items = []
+    if items:
+        # 始终提供空标识符占位项，避免枚举当前值未设置时下拉框显示空白
+        items.insert(0, ("", "None", "No audio strip selected"))
+    else:
+        items.append(("", "None", "No audio strips found"))
+    return _keepalive_enum_items("timeline_audio", items)
+
+
+def _build_timeline_audio_items(scene):
+    """构建时间线音频片段的枚举项列表，片段名称即标识符。"""
+    if scene is None:
+        return []
     items = []
-    seen_ids = set()
-    for strip in sorted(se.sequences, key=lambda s: s.channel, reverse=True):
-        if strip.type == 'SOUND':
-            filepath = getattr(strip.sound, 'filepath', None)
-        elif strip.type == 'MOVIE':
-            filepath = getattr(getattr(strip, 'sound', None), 'filepath', None)
-        else:
+    seen_names = set()
+    strips = sorted(get_scene_strips(scene), key=lambda s: s.channel, reverse=True)
+    for strip in strips:
+        if not get_strip_audio_filepath(strip):
             continue
-        if not filepath:
+        if strip.name in seen_names:
             continue
-        uid = f"{strip.channel}:{strip.name}"
-        if uid not in seen_ids:
-            seen_ids.add(uid)
-            items.append((uid, strip.name, f"Channel {strip.channel}"))
+        seen_names.add(strip.name)
+        items.append((strip.name, strip.name, f"Channel {strip.channel}"))
+    return items
 
-    return items if items else [("", "None", "No audio strips found")]
+
+def _read_timeline_strip_value(scene):
+    """读取时间线片段枚举的当前值，存储值不在当前 items 中时按空处理。"""
+    try:
+        return scene.lips_timeline_audio_strip
+    except TypeError:
+        # 旧版 .blend 存的 "channel:name" 可能不在当前 items 中，读取会抛异常
+        return ""
+
+
+def _sanitize_timeline_strip_selection(scene):
+    """确保时间线音频片段选择与当前 VSE 内容一致。"""
+    strips = [
+        strip for strip in get_scene_strips(scene)
+        if get_strip_audio_filepath(strip)
+    ]
+    current = _read_timeline_strip_value(scene)
+    strip = find_strip_by_name(strips, current)
+    if strip is not None:
+        # 旧版 "channel:name" 形式规范化为纯名称
+        if current != strip.name:
+            scene.lips_timeline_audio_strip = strip.name
+        return
+    scene.lips_timeline_audio_strip = strips[0].name if strips else ""
+
+
+def _on_lips_audio_source_update(self, _context):
+    """切换到时间线来源时自动校正音频片段选择。"""
+    if self.lips_audio_source == 'timeline':
+        _sanitize_timeline_strip_selection(self)
 
 
 lips_audio_source = bpy.props.EnumProperty(
@@ -41,6 +100,7 @@ lips_audio_source = bpy.props.EnumProperty(
         ("timeline", "Timeline", "Use audio from the Video Sequence Editor timeline"),
     ),
     default="file",
+    update=_on_lips_audio_source_update,
 )
 
 lips_timeline_audio_strip = bpy.props.EnumProperty(
@@ -62,10 +122,10 @@ def get_lips_config_files(_self, _context):
     """获取口型配置文件列表"""
     config_manager = get_config_manager()
     config_files = config_manager.get_config_entries('lip_sync')
-    return [
+    return _keepalive_enum_items("lips_config", [
         (config['id'], config['display_name'], config['description'])
         for config in config_files
-    ]
+    ])
 
 lips_config_selection = bpy.props.EnumProperty(
     name="Lip Sync Config",
@@ -86,10 +146,10 @@ def get_blink_config_files(_self, _context):
     """获取眨眼配置文件列表"""
     config_manager = get_config_manager()
     config_files = config_manager.get_config_entries('blink')
-    return [
+    return _keepalive_enum_items("blink_config", [
         (config['id'], config['display_name'], config['description'])
         for config in config_files
-    ]
+    ])
 
 blink_config_selection = bpy.props.EnumProperty(
     name="Blink Config",
