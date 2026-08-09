@@ -36,6 +36,8 @@ translation_zh_map = {
     ("*", "No audio in timeline"): "时间线中没有音频",
     ("*", "Audio Strip"): "音频片段",
     ("*", "Select an audio strip from the timeline"): "从时间线中选择一个音频片段",
+    ("*", "No audio strip selected"): "未选择音频片段",
+    ("*", "No audio strips found"): "时间线中没有音频片段",
     ("*", "Audio starts at frame"): "音频起始帧",
     ("*", "Bilibili cover image"): "必剪封面",
     ("*", "382:239 Bilibili cover image"): "382:239 B站封面",

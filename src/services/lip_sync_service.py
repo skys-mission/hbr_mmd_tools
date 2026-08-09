@@ -8,6 +8,7 @@ from ..audio.lips import Lips
 from ..core.config_manager import get_config_manager
 from ..core.config_schema import CANONICAL_LIP_SYNC_KEYS
 from ..core.lip_sync_profiles import get_lip_sync_preset_values
+from ..core.sequencer import find_strip_by_name, get_scene_strips, get_strip_audio_filepath
 from .selection_service import (
     clear_shape_key_keyframes_in_range,
     find_selected_meshes_with_shape_keys,
@@ -69,17 +70,10 @@ def generate_lip_sync(context):
 
 def _find_timeline_audio_strip(scene):
     """根据场景属性查找选中的时间线音频片段。"""
-    se = scene.sequence_editor
-    if not se:
-        return None
-    selected_uid = scene.lips_timeline_audio_strip
-    if not selected_uid:
-        return None
-    for strip in se.sequences:
-        uid = f"{strip.channel}:{strip.name}"
-        if uid == selected_uid:
-            return strip
-    return None
+    return find_strip_by_name(
+        get_scene_strips(scene),
+        scene.lips_timeline_audio_strip,
+    )
 
 
 def _resolve_audio_path(scene):
@@ -100,12 +94,7 @@ def _resolve_audio_path(scene):
             "Please add audio to the VSE timeline and select a strip."
         )
 
-    filepath = None
-    if strip.type == 'SOUND':
-        filepath = getattr(strip.sound, 'filepath', None)
-    elif strip.type == 'MOVIE':
-        filepath = getattr(getattr(strip, 'sound', None), 'filepath', None)
-
+    filepath = get_strip_audio_filepath(strip)
     if not filepath:
         raise ValueError(f"Selected strip '{strip.name}' has no valid audio filepath.")
 
