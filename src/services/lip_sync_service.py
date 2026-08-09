@@ -4,6 +4,8 @@
 口型生成服务。
 """
 
+import os
+
 from ..audio.lips import Lips
 from ..core.compat import get_action_fcurves
 from ..core.config_manager import get_config_manager
@@ -78,14 +80,22 @@ def _find_timeline_audio_strip(scene):
 
 
 def _resolve_audio_path(scene):
-    """根据音频源设置解析音频文件路径。"""
+    """根据音频源设置解析音频文件路径。
+
+    统一经 bpy.path.abspath 展开 Blender 相对路径（// 前缀），再做用户目录
+    展开与规范化：文件选择器在用户开启"相对路径"偏好时会存成 // 开头的路径，
+    Windows 上原样传给 os.path.isfile 会被当作 UNC 路径而误判不存在。
+    """
     import bpy  # pylint: disable=import-outside-toplevel,import-error
 
     if scene.lips_audio_source == 'file':
-        path = scene.lips_audio_path
+        # 去掉首尾空白与成对引号（Windows"复制路径"会带引号）
+        path = (scene.lips_audio_path or "").strip().strip('"').strip()
         if not path:
             raise ValueError("No audio file path specified")
-        return path
+        abs_path = os.path.normpath(os.path.expanduser(bpy.path.abspath(path)))
+        Log.info(f"File audio resolved: {abs_path}")
+        return abs_path
 
     # timeline mode
     strip = _find_timeline_audio_strip(scene)
@@ -99,7 +109,7 @@ def _resolve_audio_path(scene):
     if not filepath:
         raise ValueError(f"Selected strip '{strip.name}' has no valid audio filepath.")
 
-    abs_path = bpy.path.abspath(filepath)
+    abs_path = os.path.normpath(os.path.expanduser(bpy.path.abspath(filepath)))
     Log.info(f"Timeline audio resolved: {strip.name} -> {abs_path}")
     return abs_path
 

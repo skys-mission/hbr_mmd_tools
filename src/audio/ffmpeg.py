@@ -19,7 +19,8 @@ def convert_to_wav_16000(audio_path):
     if not os.path.isfile(audio_path):
         raise FileNotFoundError(f"Input file does not exist: {audio_path}")
 
-    base_name = Path(audio_path).stem
+    # 截断文件名前缀：Windows MAX_PATH 260，长文件名叠加 Temp 目录可能溢出
+    base_name = Path(audio_path).stem[:32]
     fd, output_path = tempfile.mkstemp(prefix=f"{base_name}_hbr16khz_", suffix=".wav")
     os.close(fd)
 

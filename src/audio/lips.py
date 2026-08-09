@@ -3,6 +3,8 @@
 """
 Lip sync generation.
 """
+import os
+
 from ..audio.ffmpeg import convert_to_wav_16000
 from ..audio.rosa import rosa
 from ..audio.viseme_curve import build_viseme_keyframes
@@ -18,11 +20,18 @@ class Lips:  # pylint: disable=too-few-public-methods
                      fps=24, anticipation_scale=1.0):
         """Generate sparse viseme keyframes from an input audio file."""
         wav_path_16 = convert_to_wav_16000(wav_path)
-        viseme_samples = rosa(
-            wav_path_16,
-            db_threshold=db_threshold,
-            rms_threshold=rms_threshold,
-        )
+        try:
+            viseme_samples = rosa(
+                wav_path_16,
+                db_threshold=db_threshold,
+                rms_threshold=rms_threshold,
+            )
+        finally:
+            # 转码产物用完即删，避免在系统临时目录堆积
+            try:
+                os.remove(wav_path_16)
+            except OSError:
+                pass
         return build_viseme_keyframes(
             viseme_samples,
             start_frame=start_frame,
