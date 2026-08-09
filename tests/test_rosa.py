@@ -165,16 +165,38 @@ class FormantTests(unittest.TestCase):
             )
             for n in range(FRAME_LENGTH)
         ]
-        f1, f2 = _estimate_formants(frame, 16000)
+        f1, f2, confidence = _estimate_formants(frame, 16000)
         self.assertAlmostEqual(f1, 500.0, delta=16.0)
         self.assertAlmostEqual(f2, 1500.0, delta=16.0)
+        self.assertGreater(confidence, 0.5)
 
     def test_estimate_formants_returns_none_when_band_empty(self):
         """Sample rates too low to cover 180-3200 Hz should yield None."""
         frame = [0.0] * FRAME_LENGTH
-        f1, f2 = _estimate_formants(frame, 200)
+        f1, f2, confidence = _estimate_formants(frame, 200)
         self.assertIsNone(f1)
         self.assertIsNone(f2)
+        self.assertEqual(confidence, 0.0)
+
+    def test_estimate_formants_confidence_distinguishes_noise(self):
+        """White noise should score much lower confidence than a vowel-like tone."""
+        window = _hann_window(FRAME_LENGTH)
+        rng = random.Random(7)
+        voiced = [
+            window[n] * (
+                math.sin(2.0 * math.pi * 700.0 * n / 16000.0)
+                + 0.6 * math.sin(2.0 * math.pi * 1200.0 * n / 16000.0)
+            )
+            for n in range(FRAME_LENGTH)
+        ]
+        noise = [window[n] * rng.uniform(-1.0, 1.0) for n in range(FRAME_LENGTH)]
+
+        _, _, voiced_confidence = _estimate_formants(voiced, 16000)
+        _, _, noise_confidence = _estimate_formants(noise, 16000)
+
+        self.assertGreater(voiced_confidence, 0.5)
+        self.assertLess(noise_confidence, voiced_confidence)
+        self.assertLess(noise_confidence, 0.5)
 
 
 class RosaEndToEndTests(unittest.TestCase):
@@ -217,6 +239,33 @@ class RosaEndToEndTests(unittest.TestCase):
 
         times = [sample["time"] for sample in results]
         self.assertEqual(times, sorted(times))
+
+    def test_rosa_holds_viseme_through_unvoiced_noise(self):
+        """低置信噪声段应保持前一浊音段的口型分布，而非随机指派。"""
+        fd, path = tempfile.mkstemp(suffix=".wav")
+        os.close(fd)
+
+        rng = random.Random(11)
+        amplitude = int(0.6 * 32767)
+        samples = []
+        for n in range(12000):
+            if n < 2000:
+                samples.append(0)
+            elif n < 6000:
+                samples.append(int(amplitude * math.sin(2.0 * math.pi * 500.0 * n / 16000.0)))
+            else:
+                samples.append(int(0.6 * amplitude * rng.uniform(-1.0, 1.0)))
+        _write_wav(path, samples)
+
+        results = rosa(path)
+
+        tone_dominant = max(CANONICAL_VISEMES, key=lambda v: results[22]["weights"][v])
+        for sample in results[40:50]:
+            # 噪声帧能量足够，openness 仍大于 0
+            self.assertGreater(sample["openness"], 0.0)
+            self.assertGreater(sum(sample["weights"].values()), 0.5)
+            dominant = max(CANONICAL_VISEMES, key=lambda v, s=sample: s["weights"][v])
+            self.assertEqual(dominant, tone_dominant)
 
 
 if __name__ == "__main__":

@@ -73,6 +73,27 @@ def score_visemes(f1, f2):
     return normalize_weights(weights)
 
 
+def gate_viseme_weights(new_weights, confidence, previous_weights):
+    """按估计置信度在新旧分布间插值。
+
+    共振峰估计在清辅音/噪声帧上不可靠，低置信时向上一帧分布靠拢，
+    避免嘴型在辅音段随机跳动；confidence >= 1 时完全采用新分布。
+    """
+    blend = clamp(confidence)
+    if blend >= 1.0:
+        return {
+            viseme: max(0.0, new_weights.get(viseme, 0.0))
+            for viseme in CANONICAL_VISEMES
+        }
+    return {
+        viseme: (
+            blend * max(0.0, new_weights.get(viseme, 0.0))
+            + (1.0 - blend) * max(0.0, previous_weights.get(viseme, 0.0))
+        )
+        for viseme in CANONICAL_VISEMES
+    }
+
+
 def apply_temporal_smoothing(
     samples,
     anticipation=0.22,
